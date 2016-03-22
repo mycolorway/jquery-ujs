@@ -1,4 +1,5 @@
 test/public/vendor/jquery.js
+bower_components/
 node_modules
 *.swp
 *.swo

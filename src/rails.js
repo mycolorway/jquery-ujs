@@ -14,6 +14,9 @@
   // by detecting and raising an error when it happens.
   'use strict';
 
+  if ( window.simple === undefined || window.simple.dialog === undefined ) {
+    throw 'simple-dialog and simple-module is required!';
+  }
   if ( $.rails !== undefined ) {
     $.error('jquery-ujs has already been loaded!');
   }
