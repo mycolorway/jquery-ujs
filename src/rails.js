@@ -486,7 +486,7 @@
             handleRemote.fail( function() { rails.enableFormElement(button); } );
           }
         });
-      
+
       return false;
     });
 
@@ -499,7 +499,7 @@
 
           rails.handleRemote(link);
         })
-      
+
       return false;
     });
 
@@ -573,8 +573,6 @@
           form.data('ujs:submit-button-formaction', button.attr('formaction'));
           form.data('ujs:submit-button-formmethod', button.attr('formmethod'));
         });
-        
-      return false;
     });
 
     $document.delegate(rails.formSubmitSelector, 'ajax:send.rails', function(event) {
