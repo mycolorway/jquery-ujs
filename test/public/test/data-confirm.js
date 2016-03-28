@@ -33,9 +33,10 @@ module('data-confirm', {
   }
 });
 
-asyncTest('1. clicking on a link with data-confirm attribute. Confirm yes.', 6, function() {
+asyncTest('clicking on a link with data-confirm attribute. Confirm yes.', 6, function() {
   var message;
-  var $simpleDialog;
+  // auto-confirm:
+  window.confirm = function(msg) { message = msg; return true };
 
   $('a[data-confirm]')
     .bind('confirm:complete', function(e, data) {
@@ -51,17 +52,12 @@ asyncTest('1. clicking on a link with data-confirm attribute. Confirm yes.', 6, 
       start();
     })
     .trigger('click');
-
-  // confirm
-  $simpleDialog = $('.simple-dialog-confirm');
-  message = $simpleDialog.find('.simple-dialog-content').text();
-  $simpleDialog.find('.btn').first().click();
-
 });
 
-asyncTest('2. clicking on a button with data-confirm attribute. Confirm yes.', 6, function() {
+asyncTest('clicking on a button with data-confirm attribute. Confirm yes.', 6, function() {
   var message;
-  var $simpleDialog;
+  // auto-confirm:
+  window.confirm = function(msg) { message = msg; return true };
 
   $('button[data-confirm]')
     .bind('confirm:complete', function(e, data) {
@@ -77,17 +73,12 @@ asyncTest('2. clicking on a button with data-confirm attribute. Confirm yes.', 6
       start();
     })
     .trigger('click');
-
-  // confirm
-  $simpleDialog = $('.simple-dialog-confirm');
-  message = $simpleDialog.find('.simple-dialog-content').text();
-  $simpleDialog.find('.btn').first().click();
-
 });
 
-asyncTest('3. clicking on a link with data-confirm attribute. Confirm No.', 3, function() {
+asyncTest('clicking on a link with data-confirm attribute. Confirm No.', 3, function() {
   var message;
-  var $simpleDialog;
+  // auto-decline:
+  window.confirm = function(msg) { message = msg; return false };
 
   $('a[data-confirm]')
     .bind('confirm:complete', function(e, data) {
@@ -99,20 +90,16 @@ asyncTest('3. clicking on a link with data-confirm attribute. Confirm No.', 3, f
     })
     .trigger('click');
 
-  // rejected
-  $simpleDialog = $('.simple-dialog-confirm');
-  message = $simpleDialog.find('.simple-dialog-content').text();
-  $simpleDialog.find('.btn').last().click();
-
   setTimeout(function() {
     equal(message, 'Are you absolutely sure?');
     start();
   }, 50);
 });
 
-asyncTest('4. clicking on a button with data-confirm attribute. Confirm No.', 3, function() {
+asyncTest('clicking on a button with data-confirm attribute. Confirm No.', 3, function() {
   var message;
-  var $simpleDialog;
+  // auto-decline:
+  window.confirm = function(msg) { message = msg; return false };
 
   $('button[data-confirm]')
     .bind('confirm:complete', function(e, data) {
@@ -124,35 +111,16 @@ asyncTest('4. clicking on a button with data-confirm attribute. Confirm No.', 3,
     })
     .trigger('click');
 
-  // rejected
-  $simpleDialog = $('.simple-dialog-confirm');
-  message = $simpleDialog.find('.simple-dialog-content').text();
-  $simpleDialog.find('.btn').last().click();
-
   setTimeout(function() {
     equal(message, 'Are you absolutely sure?');
     start();
   }, 50);
 });
 
-asyncTest('5. clicking on a button with data-confirm attribute. Confirm error.', 3, function() {
+asyncTest('clicking on a button with data-confirm attribute. Confirm error.', 3, function() {
   var message;
-  var originConfirm = $.rails.confirm
-  $.rails.confirm = function(m) {
-    return new Promise(function(resolve, reject) {
-      try {
-        var dialog = simple.dialog.confirm({
-          content: m,
-          callback: function(e, yes) {
-            resolve(yes);
-          }
-        });
-        throw 'random exception';
-      } catch(e) {
-        resolve(false);
-      }
-    });
-  }
+  // auto-decline:
+  window.confirm = function(msg) { message = msg; throw "some random error"; };
 
   $('button[data-confirm]')
     .bind('confirm:complete', function(e, data) {
@@ -164,20 +132,16 @@ asyncTest('5. clicking on a button with data-confirm attribute. Confirm error.',
     })
     .trigger('click');
 
-  $simpleDialog = $('.simple-dialog-confirm');
-  message = $simpleDialog.find('.simple-dialog-content').text();
-
   setTimeout(function() {
     equal(message, 'Are you absolutely sure?');
     start();
-
-    $.rails.confirm = originConfirm
   }, 50);
 });
 
-asyncTest('6. clicking on a submit button with form and data-confirm attributes. Confirm No.', 3, function() {
+asyncTest('clicking on a submit button with form and data-confirm attributes. Confirm No.', 3, function() {
   var message;
-  var $simpleDialog;
+  // auto-decline:
+  window.confirm = function(msg) { message = msg; return false };
 
   $('input[type=submit][form]')
     .bind('confirm:complete', function(e, data) {
@@ -189,18 +153,18 @@ asyncTest('6. clicking on a submit button with form and data-confirm attributes.
     })
     .trigger('click');
 
-  // rejected
-  $simpleDialog = $('.simple-dialog-confirm');
-  message = $simpleDialog.find('.simple-dialog-content').text();
-  $simpleDialog.find('.btn').last().click();
-
   setTimeout(function() {
     equal(message, 'Are you absolutely sure?');
     start();
   }, 50);
 });
 
-asyncTest('7. binding to confirm event of a link and returning false', 2, function() {
+asyncTest('binding to confirm event of a link and returning false', 1, function() {
+  // redefine confirm function so we can make sure it's not called
+  window.confirm = function(msg) {
+    ok(false, 'confirm dialog should not be called');
+  };
+
   $('a[data-confirm]')
     .bind('confirm', function() {
       App.assertCallbackInvoked('confirm');
@@ -211,15 +175,16 @@ asyncTest('7. binding to confirm event of a link and returning false', 2, functi
     })
     .trigger('click');
 
-  // simple.dialog.confirm should not be called
-  equal(0, $('.simple-dialog-confirm').length);
-
   setTimeout(function() {
     start();
   }, 50);
 });
 
-asyncTest('8. binding to confirm event of a button and returning false', 2, function() {
+asyncTest('binding to confirm event of a button and returning false', 1, function() {
+  // redefine confirm function so we can make sure it's not called
+  window.confirm = function(msg) {
+    ok(false, 'confirm dialog should not be called');
+  };
 
   $('button[data-confirm]')
     .bind('confirm', function() {
@@ -231,16 +196,17 @@ asyncTest('8. binding to confirm event of a button and returning false', 2, func
     })
     .trigger('click');
 
-  // simple.dialog.confirm should not be called
-  equal(0, $('.simple-dialog-confirm').length);
-
   setTimeout(function() {
     start();
   }, 50);
 });
 
-asyncTest('9. binding to confirm:complete event of a link and returning false', 2, function() {
-  var $simpleDialog;
+asyncTest('binding to confirm:complete event of a link and returning false', 2, function() {
+  // auto-confirm:
+  window.confirm = function(msg) {
+    ok(true, 'confirm dialog should be called');
+    return true;
+  };
 
   $('a[data-confirm]')
     .bind('confirm:complete', function() {
@@ -252,20 +218,17 @@ asyncTest('9. binding to confirm:complete event of a link and returning false', 
     })
     .trigger('click');
 
-  // confirm
-  $simpleDialog = $('.simple-dialog-confirm');
-  // simple.dialog.confirm should be called
-  equal(1, $simpleDialog.length);
-
-  $simpleDialog.find('.btn').first().click();
-
   setTimeout(function() {
     start();
   }, 50);
 });
 
-asyncTest('10. binding to confirm:complete event of a button and returning false', 2, function() {
-  var $simpleDialog;
+asyncTest('binding to confirm:complete event of a button and returning false', 2, function() {
+  // auto-confirm:
+  window.confirm = function(msg) {
+    ok(true, 'confirm dialog should be called');
+    return true;
+  };
 
   $('button[data-confirm]')
     .bind('confirm:complete', function() {
@@ -277,36 +240,17 @@ asyncTest('10. binding to confirm:complete event of a button and returning false
     })
     .trigger('click');
 
-  // confirm
-  $simpleDialog = $('.simple-dialog-confirm');
-  // simple.dialog.confirm should be called
-  equal(1, $simpleDialog.length);
-
-  $simpleDialog.find('.btn').first().click();
-
   setTimeout(function() {
     start();
   }, 50);
 });
 
-asyncTest('11. a button inside a form only confirms once', 1, function() {
+asyncTest('a button inside a form only confirms once', 1, function() {
   var confirmations = 0;
-
-  $.rails.confirm = function(m) {
-    confirmations += 1;
-    return new Promise(function(resolve, reject) {
-      try {
-        var dialog = simple.dialog.confirm({
-          content: m,
-          callback: function(e, yes) {
-            resolve(yes);
-          }
-        });
-      } catch(e) {
-        resolve(false);
-      }
-    });
-  }
+  window.confirm = function(msg) {
+    confirmations++;
+    return true;
+  };
 
   $('#qunit-fixture').append($('<form />').append($('<button />', {
     'data-remote': 'true',
