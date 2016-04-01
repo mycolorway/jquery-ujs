@@ -447,12 +447,15 @@
             } else {
               handleRemote.fail( function() { rails.enableElement(link); } );
             }
+            return false;
+
           } else if (method) {
             rails.handleMethod(link);
+            return false;
           }
         });
 
-      return false;
+        return false;
     });
 
     $document.delegate(rails.buttonClickSelector, 'click.rails', function(e) {
@@ -530,10 +533,12 @@
 
             rails.handleRemote(form);
             return false;
-
           } else {
             // Slight timeout so that the submit button gets properly serialized
-            setTimeout(function(){ rails.disableFormElements(form); }, 13);
+            setTimeout(function(){
+              rails.disableFormElements(form);
+              form[0].submit();
+            }, 13);
           }
         });
 
