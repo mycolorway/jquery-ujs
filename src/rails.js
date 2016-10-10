@@ -86,14 +86,18 @@
 
     // Default confirm dialog, may be overridden with custom confirm dialog in $.rails.confirm
     confirm: function(message) {
-      var deferred = $.Deferred();
-      zhiren.confirm({
-        content: message,
-        callback: function(answer){
-          deferred.resolve(answer)
-        }
-      })
-      return deferred.promise();
+      if(window.zhiren){
+        var deferred = $.Deferred();
+        zhiren.confirm({
+          content: message,
+          callback: function(answer){
+            deferred.resolve(answer);
+          }
+        });
+        return deferred.promise();
+      }else{
+        return confirm(message);
+      }
     },
 
     // Default ajax function, may be overridden with custom function in $.rails.ajax
@@ -299,27 +303,21 @@
       return false. The `confirm:complete` event is fired whether or not the user answered true or false to the dialog.
 
       Modified by frankfang:
-      Now allowAction returns a promise.
    */
     allowAction: function(element) {
-      var deferred = $.Deferred();
       var message = element.data('confirm'),
-          answer = false,
-          callback;
-      if (!message) { deferred.resolve(true); }
+        answer = false, callback;
+      if (!message) { return true; }
 
       if (rails.fire(element, 'confirm')) {
-        rails.confirm(message).then(function(answer){
-          callback = rails.fire(element, 'confirm:complete', [answer]);
-          deferred.resolve(answer && callback);
-        }).catch(function(e){
+        try {
+          answer = rails.confirm(message);
+        } catch (e) {
           (console.error || console.log).call(console, e.stack || e);
-          deferred.reject(e);
-        });
-      }else{
-        deferred.resolve(answer);
+        }
+        callback = rails.fire(element, 'confirm:complete', [answer]);
       }
-      return deferred.promise();
+      return callback && answer;
     },
 
     // Helper function which checks for blank inputs in a form that match the specified CSS selector
@@ -441,9 +439,7 @@
 
     $document.on('click.rails', rails.linkClickSelector, function(e) {
       var link = $(this), method = link.data('method'), data = link.data('params'), metaClick = e.metaKey || e.ctrlKey;
-      rails.allowAction(link).then(function(allow){
-        if (!allow) return;
-
+      var handle = function () {
         if (!metaClick && link.is(rails.linkDisableSelector)) rails.disableElement(link);
 
         if (rails.isRemote(link)) {
@@ -462,17 +458,23 @@
           rails.handleMethod(link);
           return false;
         }
-      });
-      return false;
+      };
+      var result = rails.allowAction(link);
+      if(result && result.then){
+        result.then(function(allow){
+          if (!allow) return;
+          handle();
+        });
+        return false;
+      }else{
+        if(!result){return rails.stopEverything(e);}
+        return handle();
+      }
     });
 
     $document.on('click.rails', rails.buttonClickSelector, function(e) {
       var button = $(this);
-
-      if (!rails.isRemote(button)) return rails.stopEverything(e);
-
-      rails.allowAction(button).then(function (allow) {
-        if (!allow) { return; }
+      var handle = function () {
         if (button.is(rails.buttonDisableSelector)) rails.disableFormElement(button);
 
         var handleRemote = rails.handleRemote(button);
@@ -480,11 +482,24 @@
         if (handleRemote === false) {
           rails.enableFormElement(button);
         } else {
-          handleRemote.fail( function() { rails.enableFormElement(button); } );
+          handleRemote.fail(function () {
+            rails.enableFormElement(button);
+          });
         }
-      });
+      };
 
+      if (!rails.isRemote(button)) return rails.stopEverything(e);
 
+      var result = rails.allowAction(button);
+      if(result && result.then) {
+        result.then(function (allow) {
+          if (!allow) { return; }
+          handle();
+        });
+      }else{
+        if (!result) return rails.stopEverything(e);
+        handle();
+      }
       return false;
     });
 
@@ -492,11 +507,16 @@
       var link = $(this);
       if (!rails.isRemote(link)) return rails.stopEverything(e);
 
-      rails.allowAction(link).then(function (allow) {
-        if(!allow){return;}
+      var result = rails.allowAction(link);
+      if(result && result.then) {
+        result.then(function (allow) {
+          if (!allow) { return; }
+          rails.handleRemote(link);
+        });
+      }else{
+        if(!result){return rails.stopEverything(e);}
         rails.handleRemote(link);
-      });
-
+      }
       return false;
     });
 
@@ -505,10 +525,7 @@
         remote = rails.isRemote(form),
         blankRequiredInputs,
         nonBlankFileInputs;
-
-      rails.allowAction(form).then(function (allow) {
-        if(!allow) { return; }
-
+      var handle = function () {
         // Skip other logic when required values are missing or file upload is present
         if (form.attr('novalidate') === undefined) {
           if (form.data('ujs:formnovalidate-button') === undefined) {
@@ -538,31 +555,38 @@
           }
 
           rails.handleRemote(form);
+          return false;
 
         } else {
           // Slight timeout so that the submit button gets properly serialized
           setTimeout(function(){ rails.disableFormElements(form); }, 13);
         }
-      });
+      };
 
-      if (remote) { return false; }
-
+      var result = rails.allowAction(form);
+      if(result && result.then) {
+        result.then(function (allow) {
+          if (!allow) { return; }
+          handle();
+        });
+        if (remote) { return false; }
+      }else{
+        if (!result){return rails.stopEverything(e);}
+        return handle();
+      }
     });
 
     $document.on('click.rails', rails.formInputClickSelector, function(event) {
       var button = $(this);
-
-      rails.allowAction(button).then(function (allow) {
-        if(!allow) { return; }
-
+      var form = button.closest('form');
+      if (form.length === 0) {
+        form = $('#' + button.attr('form'));
+      }
+      var handle = function () {
         // Register the pressed submit button
         var name = button.attr('name'),
           data = name ? {name:name, value:button.val()} : null;
 
-        var form = button.closest('form');
-        if (form.length === 0) {
-          form = $('#' + button.attr('form'));
-        }
         form.data('ujs:submit-button', data);
 
         // Save attributes from button
@@ -570,11 +594,20 @@
         form.data('ujs:submit-button-formaction', button.attr('formaction'));
         form.data('ujs:submit-button-formmethod', button.attr('formmethod'));
 
-        form.trigger('submit.rails');
-      });
+      };
 
-      return false;
-
+      var result = rails.allowAction(button);
+      if(result && result.then) {
+        result.then(function (allow) {
+          if (!allow) { return; }
+          handle();
+          form.trigger('submit.rails');
+        });
+        return false;
+      }else{
+        if (!result) return rails.stopEverything(event);
+        return handle();
+      }
     });
 
     $document.on('ajax:send.rails', rails.formSubmitSelector, function(event) {
