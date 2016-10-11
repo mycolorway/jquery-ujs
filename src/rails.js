@@ -86,18 +86,7 @@
 
     // Default confirm dialog, may be overridden with custom confirm dialog in $.rails.confirm
     confirm: function(message) {
-      if(window.zhiren){
-        var deferred = $.Deferred();
-        zhiren.confirm({
-          content: message,
-          callback: function(answer){
-            deferred.resolve(answer);
-          }
-        });
-        return deferred.promise();
-      }else{
-        return confirm(message);
-      }
+      return confirm(message);
     },
 
     // Default ajax function, may be overridden with custom function in $.rails.ajax
