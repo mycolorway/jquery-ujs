@@ -300,7 +300,7 @@
 
       if (rails.fire(element, 'confirm')) {
         try {
-          answer = rails.confirm(message);
+          answer = rails.confirm(message, element);
         } catch (e) {
           (console.error || console.log).call(console, e.stack || e);
         }
